@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+
 export interface Env {
 	ALLOWED_ORIGIN: string;
 	GITHUB_TOKEN: string;
@@ -22,6 +23,13 @@ interface GitHubFileResponse {
 	content: string;
 	sha: string;
 }
+
+// Response types
+export type ValidationErrorResponse = { success: false; error: { issues: z.core.$ZodIssue[] } };
+export type GeneralErrorResponse = { success: false; error: { message: string } };
+export type ErrorResponse = ValidationErrorResponse | GeneralErrorResponse;
+export type SuccessResponse = { success: true; filename: string; galleryUrl: string };
+export type ApiResponse = SuccessResponse | ErrorResponse;
 
 // Zod schema for input validation
 const uploadInputSchema = z.object({
@@ -51,12 +59,12 @@ export default {
 
 		// Only allow POST requests
 		if (request.method !== 'POST') {
-			return jsonResponse({ success: false, error: 'Method not allowed' }, 405, corsHeaders);
+			return jsonResponse<GeneralErrorResponse>({ success: false, error: { message: 'Method not allowed' } }, 405, corsHeaders);
 		}
 
 		// Enforce allowed origin for actual requests (protects simple requests without preflight)
 		if (origin !== env.ALLOWED_ORIGIN) {
-			return jsonResponse({ success: false, error: 'Origin not allowed' }, 403, corsHeaders);
+			return jsonResponse<GeneralErrorResponse>({ success: false, error: { message: 'Origin not allowed' } }, 403, corsHeaders);
 		}
 
 		try {
@@ -75,7 +83,7 @@ export default {
 			// Validate whole form data with zod schema
 			const validation = uploadInputSchema.safeParse(formFields);
 			if (!validation.success) {
-				return jsonResponse({ success: false, issues: validation.error.issues }, 400, corsHeaders);
+				return jsonResponse<ValidationErrorResponse>({ success: false, error: { issues: validation.error.issues } }, 400, corsHeaders);
 			}
 
 			// Use validated data from zod
@@ -122,7 +130,7 @@ export default {
 
 			// Return success
 			const galleryUrl = `https://${env.GITHUB_OWNER}.github.io/${env.GITHUB_REPO}/${env.ACTIVE_WORKSHOP_SLUG}/`;
-			return jsonResponse(
+			return jsonResponse<SuccessResponse>(
 				{
 					success: true,
 					filename: finalFilename,
@@ -133,10 +141,10 @@ export default {
 			);
 		} catch (error) {
 			console.error('Upload error:', error);
-			return jsonResponse(
+			return jsonResponse<GeneralErrorResponse>(
 				{
 					success: false,
-					error: 'Internal server error. Please try again.',
+					error: { message: 'Internal server error. Please try again.' },
 				},
 				500,
 				corsHeaders
@@ -280,7 +288,7 @@ async function updateManifest(token: string, owner: string, repo: string, manife
 }
 
 // Helper to create JSON response
-function jsonResponse(data: unknown, status: number, headers: Record<string, string>) {
+function jsonResponse<T extends ApiResponse>(data: T, status: number, headers: Record<string, string>) {
 	return new Response(JSON.stringify(data), {
 		status: status,
 		headers: {
