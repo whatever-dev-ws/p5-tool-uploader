@@ -20,6 +20,7 @@
 			}
 		},
 		"production": {
+			"name": "p5-tool-uploader",
 			"vars": {
 				"ALLOWED_ORIGIN": "https://whatever-dev-ws.github.io",
 				"GITHUB_OWNER": "whatever-dev-ws",
