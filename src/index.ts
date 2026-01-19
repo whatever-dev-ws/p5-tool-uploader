@@ -253,11 +253,11 @@ async function updateManifest(token: string, owner: string, repo: string, manife
 		sha = currentManifest.sha;
 	} else {
 		// Create new manifest
-		manifest = { sketches: [] };
+		manifest = { tools: [] };
 		sha = undefined;
 	}
 
-	// Add new sketch to beginning of array
+	// Add new tool to beginning of array
 	manifest.tools.unshift(newTool);
 
 	// Upload updated manifest
@@ -272,7 +272,7 @@ async function updateManifest(token: string, owner: string, repo: string, manife
 			'User-Agent': 'P5-Tool-Uploader',
 		},
 		body: JSON.stringify({
-			message: 'Update manifest with new sketch',
+			message: 'Update manifest with new tool',
 			content: base64Encode(JSON.stringify(manifest, null, 2)),
 			sha: sha,
 			branch: 'main',
